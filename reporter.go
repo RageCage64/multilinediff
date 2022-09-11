@@ -1,4 +1,4 @@
-package prettyreporter
+package multilinediff
 
 import (
 	"fmt"
@@ -7,10 +7,50 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
+type diffType int
+
+const (
+	diffTypeEqual diffType = iota
+	diffTypeChange
+	diffTypeAdd
+)
+
+type diffLine struct {
+	diff diffType
+	old  string
+	new  string
+}
+
+func (l diffLine) toLine(length int) string {
+	line := ""
+
+	switch l.diff {
+	case diffTypeChange:
+		line += "- "
+	case diffTypeAdd:
+		line += "+ "
+	default:
+		line += "  "
+	}
+
+	line += l.old
+
+	for i := 0; i < length-len(l.old); i++ {
+		line += " "
+	}
+
+	line += "  "
+
+	line += l.new
+
+	return line
+}
+
 type Reporter struct {
+	LineSep string
+
 	path      cmp.Path
-	old       []string
-	new       []string
+	lines     []diffLine
 	diffCount int
 }
 
@@ -19,19 +59,25 @@ func (r *Reporter) PushStep(ps cmp.PathStep) {
 }
 
 func (r *Reporter) Report(rs cmp.Result) {
+	line := diffLine{}
 	vOld, vNew := r.path.Last().Values()
 	if !rs.Equal() {
 		r.diffCount++
 		if vOld.IsValid() {
-			r.old = append(r.old, fmt.Sprintf("%+v", vOld))
+			line.diff = diffTypeChange
+			line.old = fmt.Sprintf("%+v", vOld)
 		}
 		if vNew.IsValid() {
-			r.new = append(r.new, fmt.Sprintf("%+v", vNew))
+			if line.diff == diffTypeEqual {
+				line.diff = diffTypeAdd
+			}
+			line.new = fmt.Sprintf("%+v", vNew)
 		}
 	} else {
-		r.old = append(r.old, "")
-		r.new = append(r.new, fmt.Sprintf("%+v", vOld))
+		line.old = fmt.Sprintf("%+v", vOld)
+		line.new = fmt.Sprintf("%+v", vOld)
 	}
+	r.lines = append(r.lines, line)
 }
 
 func (r *Reporter) PopStep() {
@@ -39,16 +85,17 @@ func (r *Reporter) PopStep() {
 }
 
 func (r *Reporter) String() string {
-
-	return strings.Join(r.lines, "\n")
-}
-
-func maxLen(strs []string) int {
-	max := 0
-	for _, s := range strs {
-		if len(s) > max {
-			max = len(s)
+	maxLen := 0
+	for _, l := range r.lines {
+		if len(l.old) > maxLen {
+			maxLen = len(l.old)
 		}
 	}
-	return max
+
+	diffLines := []string{}
+	for _, l := range r.lines {
+		diffLines = append(diffLines, l.toLine(maxLen))
+	}
+
+	return strings.Join(diffLines, r.LineSep)
 }

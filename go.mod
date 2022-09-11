@@ -1,4 +1,4 @@
-module github.com/RageCage64/pretty-diff-reporter
+module github.com/RageCage64/multilinediff
 
 go 1.18
 
