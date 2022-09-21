@@ -7,10 +7,9 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
-func MultilineDiff(a, b, lineSep string) string {
-	reporter := Reporter{
-		LineSep: lineSep,
-	}
+// Get the diff between two strings.
+func Diff(a, b, lineSep string) (string, int) {
+	reporter := Reporter{LineSep: lineSep}
 	cmp.Diff(
 		a, b,
 		cmpopts.AcyclicTransformer("multiline", func(s string) []string {
@@ -18,5 +17,5 @@ func MultilineDiff(a, b, lineSep string) string {
 		}),
 		cmp.Reporter(&reporter),
 	)
-	return reporter.String()
+	return reporter.String(), reporter.DiffCount
 }

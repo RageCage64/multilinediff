@@ -46,12 +46,13 @@ func (l diffLine) toLine(length int) string {
 	return line
 }
 
+// A pretty reporter to pass into cmp.Diff using the cmd.Reporter function.
 type Reporter struct {
-	LineSep string
+	LineSep   string
+	DiffCount int
 
-	path      cmp.Path
-	lines     []diffLine
-	diffCount int
+	path  cmp.Path
+	lines []diffLine
 }
 
 func (r *Reporter) PushStep(ps cmp.PathStep) {
@@ -62,7 +63,7 @@ func (r *Reporter) Report(rs cmp.Result) {
 	line := diffLine{}
 	vOld, vNew := r.path.Last().Values()
 	if !rs.Equal() {
-		r.diffCount++
+		r.DiffCount++
 		if vOld.IsValid() {
 			line.diff = diffTypeChange
 			line.old = fmt.Sprintf("%+v", vOld)
